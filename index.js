@@ -5,14 +5,28 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const Message = require("./models/Message");
-const jwt = require("jsonwebtoken"); // Add this line
+const jwt = require("jsonwebtoken");
 
 dotenv.config();
 const app = express();
 const server = http.createServer(app);
+
+// Allowed origins from environment variable
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
+
+// CORS middleware
+app.use(
+  cors({
+    origin: allowedOrigins, // Allow multiple origins
+    methods: "GET,POST,PUT,DELETE",
+    credentials: true,
+  })
+);
+
+// Socket.IO CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Match your frontend URL
+    origin: allowedOrigins, // Allow multiple origins
     methods: ["GET", "POST"],
   },
 });
@@ -20,13 +34,6 @@ const io = new Server(server, {
 connectDB();
 
 app.use(express.json());
-app.use(
-  cors({
-    origin: "http://localhost:3000", // Match your frontend URL
-    methods: "GET,POST,PUT,DELETE",
-    credentials: true,
-  })
-);
 
 // Import Routes
 const authRoutes = require("./routes/authRoute");
@@ -37,7 +44,7 @@ const postRoutes = require("./routes/PostRoute");
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/posts", postRoutes); 
+app.use("/api/posts", postRoutes);
 
 // Socket.IO authentication middleware
 io.use((socket, next) => {
@@ -47,7 +54,7 @@ io.use((socket, next) => {
   }
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) return next(new Error("Authentication error"));
-    socket.userId = decoded.userId; // Attach user ID to the socket
+    socket.userId = decoded.userId;
     next();
   });
 });
