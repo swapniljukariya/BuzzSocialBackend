@@ -7,108 +7,106 @@ const { Server } = require("socket.io");
 const Message = require("./models/Message");
 const jwt = require("jsonwebtoken");
 
-// Load .env file
+// Load environment variables
 dotenv.config();
 
+// Initialize Express
 const app = express();
 const server = http.createServer(app);
 
-// Get allowed origin from .env (single URL)
-const allowedOrigin = process.env.ALLOWED_ORIGINS || "http://localhost:3000";
-console.log("Allowed Origin:", allowedOrigin); // Debugging
+// Configure CORS
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(",") 
+  : ["http://localhost:3002"];
 
-// CORS middleware
-app.use(
-  cors({
-    origin: allowedOrigin,
-    methods: "GET,POST,PUT,DELETE",
-    credentials: true,
-  })
-);
+console.log("Allowed Origins:", allowedOrigins);
 
-// Socket.IO CORS configuration
-const io = new Server(server, {
-  cors: {
-    origin: allowedOrigin,
-    methods: ["GET", "POST"],
-  },
-});
-
-connectDB();
+// Middleware
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"]
+}));
 
 app.use(express.json());
 
-// Import Routes
-const authRoutes = require("./routes/authRoute");
-const userRoutes = require("./routes/userRoute");
-const messageRoutes = require("./routes/meassageRoute");
-const postRoutes = require("./routes/PostRoute");
-const storyRoutes = require("./routes/StoriesRouter");
-
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/posts", postRoutes);
-app.use("/api/stories", storyRoutes);
-
-// Socket.IO authentication middleware
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) {
-    return next(new Error("Authentication error"));
+// Configure Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   }
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return next(new Error("Authentication error"));
-    socket.userId = decoded.userId;
-    next();
-  });
 });
 
-// Socket.IO connection handler
+// Database Connection
+connectDB();
+
+// Routes
+app.use("/api/auth", require("./routes/authRoute"));
+app.use("/api/users", require("./routes/userRoute"));
+app.use("/api/messages", require("./routes/messageRoute")); // Fixed typo in filename
+app.use("/api/posts", require("./routes/PostRoute"));
+app.use("/api/stories", require("./routes/StoriesRouter"));
+
+// Socket.IO Authentication Middleware
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      throw new Error("Authentication error");
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.id; // Ensure your JWT uses 'id' claim
+    next();
+  } catch (error) {
+    console.error("Socket authentication error:", error.message);
+    next(new Error("Authentication failed"));
+  }
+});
+
+// Socket.IO Event Handlers
 io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
+  console.log(`User connected: ${socket.id} (User ID: ${socket.userId})`);
 
-  // Log all socket events for debugging
-  socket.onAny((event, ...args) => {
-    console.log(`Socket event: ${event}`, args);
-  });
-
-  // Join room
   socket.on("joinRoom", ({ sender, receiver }) => {
     if (!sender || !receiver) {
-      console.error("Invalid sender or receiver");
-      return;
+      return console.error("Invalid room parameters");
     }
+    
     const room = [sender, receiver].sort().join("-");
     socket.join(room);
-    console.log(`User ${socket.id} joined room ${room}`);
+    console.log(`User ${socket.userId} joined room ${room}`);
   });
 
-  // Handle private messages
   socket.on("privateMessage", async ({ sender, receiver, text }) => {
-    if (!sender || !receiver || !text) {
-      console.error("Missing fields in privateMessage");
-      return;
-    }
     try {
-      const newMessage = new Message({ sender, receiver, text });
-      await newMessage.save();
+      if (!sender || !receiver || !text) {
+        throw new Error("Invalid message parameters");
+      }
+
+      const newMessage = await Message.create({
+        sender,
+        receiver,
+        text
+      });
 
       const room = [sender, receiver].sort().join("-");
       io.to(room).emit("receiveMessage", newMessage);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Message error:", error.message);
     }
   });
 
-  // Handle disconnection
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log(`User disconnected: ${socket.id} (User ID: ${socket.userId})`);
   });
 });
 
-// Start the server
-const PORT = process.env.PORT || 5000;
+// Server Configuration
+const PORT = process.env.PORT || 8001;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
 });
