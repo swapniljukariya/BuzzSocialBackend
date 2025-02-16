@@ -11,13 +11,13 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Allowed origins from environment variable
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
+// Get allowed origin from .env (single URL)
+const allowedOrigin = process.env.ALLOWED_ORIGINS || "http://localhost:3000";
 
 // CORS middleware
 app.use(
   cors({
-    origin: allowedOrigins, // Allow multiple origins
+    origin: allowedOrigin,
     methods: "GET,POST,PUT,DELETE",
     credentials: true,
   })
@@ -26,7 +26,7 @@ app.use(
 // Socket.IO CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins, // Allow multiple origins
+    origin: allowedOrigin,
     methods: ["GET", "POST"],
   },
 });
@@ -40,11 +40,13 @@ const authRoutes = require("./routes/authRoute");
 const userRoutes = require("./routes/userRoute");
 const messageRoutes = require("./routes/meassageRoute");
 const postRoutes = require("./routes/PostRoute");
+const storyRoutes = require("./routes/StoriesRouter");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/stories", storyRoutes);
 
 // Socket.IO authentication middleware
 io.use((socket, next) => {
