@@ -7,12 +7,15 @@ const { Server } = require("socket.io");
 const Message = require("./models/Message");
 const jwt = require("jsonwebtoken");
 
+// Load .env file
 dotenv.config();
+
 const app = express();
 const server = http.createServer(app);
 
 // Get allowed origin from .env (single URL)
 const allowedOrigin = process.env.ALLOWED_ORIGINS || "http://localhost:3000";
+console.log("Allowed Origin:", allowedOrigin); // Debugging
 
 // CORS middleware
 app.use(
