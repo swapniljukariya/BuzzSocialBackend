@@ -45,7 +45,7 @@ connectDB();
 // Routes
 app.use("/api/auth", require("./routes/authRoute"));
 app.use("/api/users", require("./routes/userRoute"));
-app.use("/api/messages", require("./routes/meassageRoute")); // Fixed typo in filename
+app.use("/api/messages", require("./routes/meassageRoute"));
 app.use("/api/posts", require("./routes/PostRoute"));
 app.use("/api/stories", require("./routes/StoriesRouter"));
 
