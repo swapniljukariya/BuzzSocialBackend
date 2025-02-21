@@ -6,6 +6,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const Message = require("./models/Message");
 const jwt = require("jsonwebtoken");
+const path = require("path");
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// Serve favicon
+app.get("/favicon.ico", (req, res) => {
+  res.sendFile(path.join(__dirname, "favicon.ico"));
+});
+
 // Configure Socket.IO
 const io = new Server(server, {
   cors: {
@@ -41,6 +47,11 @@ const io = new Server(server, {
 
 // Database Connection
 connectDB();
+
+// Root Route
+app.get("/", (req, res) => {
+  res.send("Welcome to the Buzz Social Backend!");
+});
 
 // Routes
 app.use("/api/auth", require("./routes/authRoute"));
