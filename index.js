@@ -31,10 +31,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Serve favicon
-app.get("/favicon.ico", (req, res) => {
-  res.sendFile(path.join(__dirname, "favicon.ico"));
-});
 
 // Configure Socket.IO
 const io = new Server(server, {
