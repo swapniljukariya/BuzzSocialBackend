@@ -18,7 +18,7 @@ const server = http.createServer(app);
 // Configure CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(",") 
-  : ["http://localhost:3003"];
+  : ["http://localhost:3004"];
 
 console.log("Allowed Origins:", allowedOrigins);
 

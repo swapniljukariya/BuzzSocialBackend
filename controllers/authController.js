@@ -1,21 +1,24 @@
-// controllers/authController.js
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    
-    // Check existing user
+
+    // Check if the user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Create user
-    const user = await User.create({ name, email, password });
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate token
+    // Create user with hashed password
+    const user = await User.create({ name, email, password: hashedPassword });
+
+    // Generate JWT token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
@@ -36,13 +39,13 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // Check password
-    const isMatch = await user.matchPassword(password);
+    // Check if password matches
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // Generate token
+    // Generate JWT token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
